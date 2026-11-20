@@ -1,0 +1,44 @@
+ABLATION: which part of the gain comes from what  -  100 jobs, 20 AGVs, seeds 1..30 (30 job sets)
+all plans verified conflict-free by agv_core.verify(); B2 (one server, FCFS legs) == C (central + floor servers) on every seed; A2 (paper rule, FCFS order) == A on every seed
+
+  A  Centralized (paper rule)
+  B  Centralized + lobbies
+  B2 Centralized + lobbies + FCFS legs
+  C  Hybrid: central + 3 floor servers
+
+steps:   A->B  lobbies      (where an AGV may wait)
+         B->B2 FCFS order   (priority-ordered routes -> release-ordered legs)
+         B2->C server split (one global window store -> central + 3 floor stores)
+
+metric (mean over seeds)                             A           B          B2           C            A->B           B->B2           B2->C
+Last delivery (makespan) (s)                     7,783       3,732       2,785       2,785        -4,051.2          -947.6            +0.0
+Total tardiness (s)                            315,011     123,243      89,437      89,437      -191,768.8       -33,805.2            +0.0
+Load imbalance (max - min usage) (s)             6,949       2,870       1,484       1,484        -4,079.5        -1,386.2            +0.0
+Total waiting (parking + lobbies) (s)           64,436      27,824      27,090      27,090       -36,611.7          -734.0            +0.0
+Longest wait of one AGV (s)                      6,932       2,872       1,899       1,899        -4,060.2          -972.7            +0.0
+Time windows held by one server                  2,064       1,763       1,763         642          -301.1            +0.0        -1,121.0
+Central <-> floor messages                         0.0         0.0         0.0         341            +0.0            +0.0          +341.1
+Planning compute time, busiest server (ms)         111        21.4        38.6        12.7           -89.3           +17.2           -25.9
+
+paired difference per step: mean +- std over seeds, wins / ties / losses (win = the step lowered the metric)
+
+metric                                            A->B lobbies        B->B2 FCFS leg order          B2->C server split
+Last delivery (makespan) (s)          -4,051.2 +-    626.2 30/ 0/ 0      -947.6 +-    258.6 30/ 0/ 0        +0.0 +-      0.0  0/30/ 0
+Total tardiness (s)                 -191,768.8 +- 32,766.9 30/ 0/ 0   -33,805.2 +- 10,614.9 30/ 0/ 0        +0.0 +-      0.0  0/30/ 0
+Load imbalance (max - min usage) (s)    -4,079.5 +-    624.8 30/ 0/ 0    -1,386.2 +-    383.9 30/ 0/ 0        +0.0 +-      0.0  0/30/ 0
+Total waiting (parking + lobbies) (s)   -36,611.7 +-  5,612.6 30/ 0/ 0      -734.0 +-  1,589.6 20/ 0/10        +0.0 +-      0.0  0/30/ 0
+Longest wait of one AGV (s)           -4,060.2 +-    633.6 30/ 0/ 0      -972.7 +-    265.7 30/ 0/ 0        +0.0 +-      0.0  0/30/ 0
+Time windows held by one server         -301.1 +-     21.0 30/ 0/ 0        +0.0 +-      0.0  0/30/ 0    -1,121.0 +-     50.1 30/ 0/ 0
+Central <-> floor messages                +0.0 +-      0.0  0/30/ 0        +0.0 +-      0.0  0/30/ 0      +341.1 +-     21.0  0/ 0/30
+Planning compute time, busiest server (ms)       -89.3 +-     31.8 30/ 0/ 0       +17.2 +-     10.0  1/ 0/29       -25.9 +-     29.6 29/ 0/ 1
+
+VERDICT
+  Makespan 7,783 s (A) -> 3,732 s (B) -> 2,785 s (B2) -> 2,785 s (C):
+    makespan     share of the A->C gain:  lobbies  81.0%   FCFS order  19.0%   server split  -0.0%
+    tardiness    share of the A->C gain:  lobbies  85.0%   FCFS order  15.0%   server split  -0.0%
+    imbalance    share of the A->C gain:  lobbies  74.6%   FCFS order  25.4%   server split  -0.0%
+
+  ONE SENTENCE: the lobbies (A->B) account for 81% of the makespan gain, 85% of the tardiness gain and 75% of the imbalance gain; the FCFS leg order (B->B2) accounts for 19%, 15% and 25%; the server split (B2->C) accounts for none of it - it changes the plans on no seed and leaves every schedule metric unchanged (0 s), paying only in central<->floor messages.
+
+compute times are wall-clock measurements of one sequential process on one machine; they compare implementations (a leg-based planner pays for its orchestration), not asymptotic cost, and no parallelism or network latency is modelled
+total run time 11.1 s (120 runs, sequential)
